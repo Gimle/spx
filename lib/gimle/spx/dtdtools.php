@@ -13,7 +13,6 @@ class DtdTools
 		$charset = strtolower($charset);
 		$this->file = file_get_contents($filename);
 
-		echo '<pre>';
 		$elements = preg_match_all('/<(.*?)>/s', $this->file, $matches);
 		foreach ($matches[1] as $value) {
 			if ((substr($value, 0, 3) === '!--') && (substr($value, -2, 2) === '--')) {
