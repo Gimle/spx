@@ -39,7 +39,7 @@ class Xml implements XmlInterface
 			if (is_string($value)) {
 				$type = 'config';
 				$key = $value;
-				$value = self::locate(System::$config, $value);
+				$value = \gimle\common\locate_in_array_by_string(System::$config, $value);
 			} else {
 				$type = 'generated';
 				$key = json_encode($value);
@@ -59,19 +59,5 @@ class Xml implements XmlInterface
 		}
 
 		return self::$connections[$type][$key];
-	}
-
-	private static function locate ($input, $search)
-	{
-		$search = explode('.', $search);
-		$result = $input;
-		foreach ($search as $key) {
-			if (isset($result[$key])) {
-				$result = $result[$key];
-			} else {
-				return false;
-			}
-		}
-		return $result;
 	}
 }
