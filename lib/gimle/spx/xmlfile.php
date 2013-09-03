@@ -29,7 +29,7 @@ class XmlFile
 		/**
 		 * Not available for file. Use another backend for this feature.
 		 */
-		throw new \Exception('The ' . get_called_class() . ' class does not support functx.', Connector::E_METHODNOTFOUND);
+		throw new \Exception('The ' . get_called_class() . ' class does not support functx.', Xml::E_METHODNOTFOUND);
 	}
 
 	public function insertBefore ($insert, $xpath)
@@ -42,6 +42,31 @@ class XmlFile
 		return $this->insert($insert, $xpath, 'after');
 	}
 
+	public function setAttributes ($xpath, $name, $value)
+	{
+		$dom = $this->xmlGet(Xml::DOM);
+
+		$domXpath = new \DomXPath($dom);
+		$last = libxml_use_internal_errors(true);
+		$res = $domXpath->query($xpath);
+		if ($res === false) {
+			throw new \Exception('Invalid expression: "' . $xpath . '".', Xml::E_XPATH);
+		}
+		libxml_clear_errors();
+		libxml_use_internal_errors($last);
+
+		foreach ($res as $item) {
+			$item->setAttribute($name, $value);
+		}
+
+		$xml = $dom->saveXML();
+		$this->xmlUpdate($xml);
+
+		unset($dom, $xp, $res, $xml);
+
+		return true;
+	}
+
 	private function insert ($insert, $xpath, $pos)
 	{
 		$replaceString = 'gimle-hopefully-safe-xml-replace-string';
@@ -49,21 +74,29 @@ class XmlFile
 		$dom = $this->xmlGet(Xml::DOM);
 
 		$domXpath = new \DOMXPath($dom);
+
 		$parentXpath = $xpath . '/parent::*';
 		$last = libxml_use_internal_errors(true);
 		$parent = $domXpath->query($parentXpath);
-		if (($parent === false)) {
-			throw new \Exception('Parent xpath: "' . $parentXpath . '" could not be found.', Connector::E_XPATH);
+		if ($parent === false) {
+			throw new \Exception('Parent xpath: "' . $parentXpath . '" could not be found.', Xml::E_XPATH);
 		}
 		$next = $domXpath->query($xpath);
 		if ($next === false) {
-			throw new \Exception('Invalid expression: "' . $xpath . '".', Connector::E_XPATH);
+			throw new \Exception('Invalid expression: "' . $xpath . '".', Xml::E_XPATH);
 		}
 		libxml_clear_errors();
 		libxml_use_internal_errors($last);
 
 		$comment = new \DOMComment($replaceString);
-		if ($pos === 'after') {
+		if ($parent->length === 0) {
+			$parentXpath = substr($xpath, 0, strrpos($xpath, '/'));
+			$parent = $domXpath->query($parentXpath);
+			if ($parent === false) {
+				throw new \Exception('Parent xpath: "' . $parentXpath . '" could not be found.', Xml::E_XPATH);
+			}
+			$parent->item(0)->appendChild($comment);
+		} elseif ($pos === 'after') {
 			$parent->item(0)->insertBefore($comment, $next->item(0)->nextSibling);
 		} else {
 			$parent->item(0)->insertBefore($comment, $next->item(0));
@@ -140,21 +173,68 @@ class XmlFile
 	{
 	}
 
-	public function xpath ($path)
+	public function registerNamespace ($prefix, $namespaceURI = false) {
+		if ($namespaceURI === false) {
+			$xml = $this->xml->get(Xml::DOM);
+			$namespaceURI = $xml->lookupNamespaceUri($xml->namespaceURI);
+		}
+		$this->registeredNamespaces[] = array('prefix' => $prefix, 'namespaceURI' => $namespaceURI);
+	}
+
+	public function xmlnsClear () {
+		$dom = $this->xml->get(Xml::DOM);
+		$e = $dom->documentElement;
+		$e->removeAttributeNS($e->getAttributeNode('xmlns')->nodeValue, '');
+		$this->xmlUpdate($dom->saveXML());
+	}
+
+	public function xpath ($path, $mode = 'xml')
 	{
-		$return = '';
+		if ($mode === 'xml') {
+			$return = '';
+		} else {
+			$return = array();
+		}
 		$last = libxml_use_internal_errors(true);
-		$res = (new \DOMXPath($this->xml->get(Xml::DOM)))->query($path);
+		$xpath = new \DOMXPath($this->xml->get(Xml::DOM));
+		if (!empty($this->registeredNamespaces)) {
+			foreach ($this->registeredNamespaces as $namespace) {
+				$xpath->registerNamespace($namespace['prefix'], $namespace['namespaceURI']);
+			}
+		}
+		$res = $xpath->query($path);
 		libxml_use_internal_errors($last);
 		if ($res === false) {
-			throw new \Exception('Invalid expression: "' . $path . '".', Connector::E_XPATH);
+			throw new \Exception('Invalid expression: "' . $path . '".', Xml::E_XPATH);
 		}
 		if ($res->length !== 0) {
 			foreach ($res as $entry) {
-				$return .= $this->xml->get(Xml::DOM)->saveXML($entry) . "\n";
+				if ($mode === 'xml') {
+					$return .= $this->xml->get(Xml::DOM)->saveXML($entry) . "\n";
+				} elseif ($mode === 'value') {
+					$return[] = $entry->nodeValue;
+				} else {
+					$return[] = $this->xml->get(Xml::DOM)->saveXML($entry);
+				}
 			}
 		}
-		return rtrim($return, "\n");
+		if ($mode === 'xml') {
+			return rtrim($return, "\n");
+		}
+		return $return;
+	}
+
+	public function getFormatted ($indent = 'tab')
+	{
+		$dom = new \DOMDocument('1.0', mb_internal_encoding());
+		$dom->preserveWhiteSpace = false;
+		$dom->formatOutput = true;
+		$dom->loadXML($this->xmlGet(Xml::STRING));
+		$return = $dom->saveXML();
+		if ($indent === 'tab') {
+			$return = preg_replace('/^  |\G  /m', "\t", $return);
+		}
+		return $return;
 	}
 
 	public function xmlGet ($type)

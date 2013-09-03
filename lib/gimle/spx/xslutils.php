@@ -34,6 +34,7 @@ class XslUtils
 				$errors = libxml_get_errors();
 				if (!empty($errors)) {
 					foreach ($errors as $error) {
+						d($error);
 						$lines = explode("\n", $xml);
 						echo '<div style="margin: 10px;">';
 						echo '<b>' . $error->message . '</b><br>';
@@ -58,7 +59,8 @@ class XslUtils
 			file_put_contents($xslfile, $this->stylesheet);
 			file_put_contents($xmlfile, $xml);
 
-			$result = \gimle\common\run('saxon-xslt -o ' . $resultfile . ' ' . $xmlfile . ' ' . $xslfile);
+			$exec = 'saxon-xslt -o ' . $resultfile . ' ' . $xmlfile . ' ' . $xslfile;
+			$result = \gimle\common\run($exec);
 			$return = file_get_contents($resultfile);
 
 			if ($result['sterr'][0] !== '') {
