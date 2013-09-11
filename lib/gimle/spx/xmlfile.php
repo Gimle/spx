@@ -91,11 +91,19 @@ class XmlFile
 		$comment = new \DOMComment($replaceString);
 		if ($parent->length === 0) {
 			$parentXpath = substr($xpath, 0, strrpos($xpath, '/'));
-			$parent = $domXpath->query($parentXpath);
-			if ($parent === false) {
-				throw new \Exception('Parent xpath: "' . $parentXpath . '" could not be found.', Xml::E_XPATH);
+			if ($parentXpath !== '') {
+				$parent = $domXpath->query($parentXpath);
+				if ($parent === false) {
+					throw new \Exception('Parent xpath: "' . $parentXpath . '" could not be found.', Xml::E_XPATH);
+				}
+				$parent->item(0)->appendChild($comment);
+			} else {
+				if ($pos === 'after') {
+					$dom->insertBefore($comment, $next->item(0)->nextSibling);
+				} else {
+					$dom->insertBefore($comment, $next->item(0));
+				}
 			}
-			$parent->item(0)->appendChild($comment);
 		} elseif ($pos === 'after') {
 			$parent->item(0)->insertBefore($comment, $next->item(0)->nextSibling);
 		} else {
