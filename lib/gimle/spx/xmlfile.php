@@ -120,12 +120,19 @@ class XmlFile
 		return true;
 	}
 
-	public function remove ($xpath)
+	public function remove ($xpath, $removeTrailingWhitespaceTextNode = false)
 	{
 		$dom = $this->xmlGet(Xml::DOM);
 		$domXpath = new \DOMXPath($dom);
 		$elems = $domXpath->query($xpath);
 		foreach ($elems as $elem) {
+			if (($removeTrailingWhitespaceTextNode === true) && ($elem->nextSibling !== null)) {
+				if ($elem->nextSibling->nodeType === XML_TEXT_NODE) {
+					if (preg_match('/^\s+$/', $elem->nextSibling->nodeValue) > 0) {
+						$elem->parentNode->removeChild($elem->nextSibling);
+					}
+				}
+			}
 			$elem->parentNode->removeChild($elem);
 		}
 		$this->xmlUpdate($dom->saveXML());
