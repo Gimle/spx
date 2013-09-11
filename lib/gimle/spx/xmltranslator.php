@@ -8,8 +8,8 @@ class XmlTranslator
 
 	public function __construct ($xml, $translation)
 	{
-		$this->xml = Xml::factory($xml);
-		$this->translation = Xml::factory($translation);
+		$this->xml = Xml::load($xml);
+		$this->translation = Xml::load($translation);
 	}
 
 	/**
@@ -23,7 +23,7 @@ class XmlTranslator
 		}
 
 		$template = $this->genTemplate('elements', $translations);
-		$xml = $this->mergeXsl($template, $this->xml->get(Xml::STRING));
+		$xml = $this->mergeXsl($template, $this->xml->xmlGet(Xml::STRING));
 
 		$translations = $this->getAttributeTranslations($language);
 
@@ -40,7 +40,7 @@ class XmlTranslator
 	{
 		$return = array();
 
-		$result = $this->xml->get(Xml::SIMPLE)->xpath('//*');
+		$result = $this->xml->xmlGet(Xml::SIMPLE)->xpath('//*');
 
 		foreach ($result as $value) {
 			$return[$value->getName()] = $value->getName();
@@ -53,7 +53,7 @@ class XmlTranslator
 		$return = array();
 		$return['*'] = array();
 
-		$result = $this->translation->get(Xml::SIMPLE)->xpath('//attribute/' . $language);
+		$result = $this->translation->xmlGet(Xml::SIMPLE)->xpath('//attribute/' . $language);
 
 		foreach ($result as $value) {
 			$tname = (string)$value->attributes()['name'];
@@ -85,7 +85,7 @@ class XmlTranslator
 
 		$return = array();
 
-		$result = $this->translation->get(Xml::SIMPLE)->xpath('//element/' . $language . '/@name');
+		$result = $this->translation->xmlGet(Xml::SIMPLE)->xpath('//element/' . $language . '/@name');
 
 		$translations = array();
 		foreach ($result as $value) {
@@ -96,7 +96,7 @@ class XmlTranslator
 
 		foreach ($this->getElementNames() as $key => $elem) {
 			if (!isset($translations[$elem])) {
-				$test = (array)$this->translation->get(Xml::SIMPLE)->xpath('//element[@name=\'' . $elem . '\']');
+				$test = (array)$this->translation->xmlGet(Xml::SIMPLE)->xpath('//element[@name=\'' . $elem . '\']');
 				if ((!empty($test)) && (isset($test[0]->children()->$language))) {
 					// if ($reverse === true) {
 					// 	foreach ($translations as $ret => $val) {

@@ -242,17 +242,17 @@ class SchemaTranslator extends Schema
 			return false;
 		}
 
-		$xml = Xml::factory($this->mergeXsl($this->genTemplate('elements', $translations)));
+		$xml = Xml::load($this->mergeXsl($this->genTemplate('elements', $translations)));
 
 		$translations = $this->getAttributeTranslations($language);
 		if ((empty($translations['found'])) || (!empty($translations['missing']))) {
 			return false;
 		}
 
-		$xml = Xml::factory($this->mergeXsl($this->genTemplate('attributes', $translations), $xml));
-		$xml = Xml::factory($this->mergeXsl($this->genTemplate('value', $translations), $xml));
+		$xml = Xml::load($this->mergeXsl($this->genTemplate('attributes', $translations), $xml));
+		$xml = Xml::load($this->mergeXsl($this->genTemplate('value', $translations), $xml));
 
-		return $xml->get();
+		return $xml->xmlGet(Xml::STRING);
 	}
 
 	/**
@@ -430,6 +430,6 @@ class SchemaTranslator extends Schema
 			$xml = $this->schema;
 		}
 		$xsl = new XslUtils($xslcontent);
-		return $xsl->mergeXml($xml->get(), $method);
+		return $xsl->mergeXml($xml->xmlGet(Xml::STRING), $method);
 	}
 }

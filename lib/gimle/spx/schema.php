@@ -8,15 +8,15 @@ class Schema {
 
 	public function __construct ($schema)
 	{
-		$this->schema = XmlHandler::factory($schema);
-		$this->schema->get(Xml::SIMPLE)->registerXPathNamespace('xs', 'http://www.w3.org/2001/XMLSchema');
+		$this->schema = Xml::load($schema);
+		$this->schema->xmlGet(Xml::SIMPLE)->registerXPathNamespace('xs', 'http://www.w3.org/2001/XMLSchema');
 	}
 
 	public function getElementNames ()
 	{
 		$return = array();
 
-		$result = $this->schema->get(Xml::SIMPLE)->xpath('//xs:element/@name');
+		$result = $this->schema->xmlGet(Xml::SIMPLE)->xpath('//xs:element/@name');
 
 		foreach ($result as $value) {
 			$return[(string)$value['name']] = (string)$value['name'];
@@ -59,7 +59,7 @@ class Schema {
 			$return = $this->cache['getAttributes'];
 		} else {
 			$return = array();
-			$result = $this->schema->get(Xml::SIMPLE)->xpath('//xs:element/*');
+			$result = $this->schema->xmlGet(Xml::SIMPLE)->xpath('//xs:element/*');
 			foreach ($result as $value) {
 				$name = (string)$value->xpath('parent::*')[0]->attributes()['name'];
 				$return[$name] = array();
@@ -119,12 +119,12 @@ class Schema {
 
 	public function getAttributesDraft ($element) {
 		$return = array();
-		$elem = $this->schema->get(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]');
+		$elem = $this->schema->xmlGet(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]');
 		if (empty($elem)) {
 			return $return;
 		}
 
-		$elements = $this->schema->get(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]/*/*[not(self::xs:attribute)]');
+		$elements = $this->schema->xmlGet(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]/*/*[not(self::xs:attribute)]');
 		if (!empty($elements)) {
 			foreach ($elements as $child) {
 				if ($child->getName() === 'sequence') {
@@ -161,7 +161,7 @@ class Schema {
 	}
 
 	private function getGroup ($element) {
-		$elements = $this->schema->get(Xml::SIMPLE)->xpath('//xs:group[@name="' . (string)$element->attributes()['ref'] . '"]');
+		$elements = $this->schema->xmlGet(Xml::SIMPLE)->xpath('//xs:group[@name="' . (string)$element->attributes()['ref'] . '"]');
 		\gimle\common\var_dump($elements);
 	}
 
@@ -210,11 +210,11 @@ class Schema {
 	public function getRequiredChildren ($element) {
 		$return = array();
 
-		$elem = $this->schema->get(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]/*');
+		$elem = $this->schema->xmlGet(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]/*');
 		if (empty($elem)) {
 			return $return;
 		}
-		$elements = $this->schema->get(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]/*/*/xs:element|//xs:element[@name="' . $element . '"]/*/*/xs:group|//xs:element[@name="' . $element . '"]/*/*/xs:choice');
+		$elements = $this->schema->xmlGet(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]/*/*/xs:element|//xs:element[@name="' . $element . '"]/*/*/xs:group|//xs:element[@name="' . $element . '"]/*/*/xs:choice');
 		if (!empty($elements)) {
 			$mode = $elements[0]->xpath('parent::*')[0]->getName();
 			foreach ($elements as $element) {
@@ -241,7 +241,7 @@ class Schema {
 
 	public function getValidChildren ($element) {
 		$return = array();
-		$elem = $this->schema->get(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]/*');
+		$elem = $this->schema->xmlGet(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]/*');
 		if (empty($elem)) {
 			return $return;
 		}
@@ -252,7 +252,7 @@ class Schema {
 		} else {
 			$mixed = false;
 		}
-		$elements = $this->schema->get(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]//xs:element');
+		$elements = $this->schema->xmlGet(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]//xs:element');
 		if (!empty($elements)) {
 			foreach ($elements as $subElement) {
 				$name = (string)$subElement->attributes()->ref;
@@ -261,12 +261,12 @@ class Schema {
 				}
 			}
 		}
-		$groups = $this->schema->get(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]//xs:group');
+		$groups = $this->schema->xmlGet(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]//xs:group');
 		if (!empty($groups)) {
 			foreach ($groups as $group) {
 				$name = (string)$group->attributes()->ref;
 				if ($name !== '') {
-					$elements = $this->schema->get(Xml::SIMPLE)->xpath('//xs:group[@name="' . $name . '"]//xs:element');
+					$elements = $this->schema->xmlGet(Xml::SIMPLE)->xpath('//xs:group[@name="' . $name . '"]//xs:element');
 					if (!empty($elements)) {
 						foreach ($elements as $subElement) {
 							$name = (string)$subElement->attributes()->ref;
@@ -278,12 +278,12 @@ class Schema {
 				}
 			}
 		}
-		$extensions = $this->schema->get(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]//xs:extension');
+		$extensions = $this->schema->xmlGet(Xml::SIMPLE)->xpath('//xs:element[@name="' . $element . '"]//xs:extension');
 		if (!empty($extensions)) {
 			foreach ($extensions as $extension) {
 				$name = (string)$extension->attributes()->base;
 				if ($name !== '') {
-					$elem = $this->schema->get(Xml::SIMPLE)->xpath('/xs:schema/xs:complexType[@name="' . $name . '"]')[0];
+					$elem = $this->schema->xmlGet(Xml::SIMPLE)->xpath('/xs:schema/xs:complexType[@name="' . $name . '"]')[0];
 					$mixedAttr = (string)$elem->attributes()->mixed;
 					if ($mixedAttr === 'true') {
 						$mixed = true;
@@ -291,7 +291,7 @@ class Schema {
 					} else {
 						$mixed = false;
 					}
-					$elements = $this->schema->get(Xml::SIMPLE)->xpath('/xs:schema/xs:complexType[@name="' . $name . '"]//xs:element');
+					$elements = $this->schema->xmlGet(Xml::SIMPLE)->xpath('/xs:schema/xs:complexType[@name="' . $name . '"]//xs:element');
 					if (!empty($elements)) {
 						foreach ($elements as $subElement) {
 							$name = (string)$subElement->attributes()->ref;
