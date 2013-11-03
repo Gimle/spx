@@ -305,4 +305,131 @@ class Schema {
 		}
 		return $return;
 	}
+
+	public function getValidSibilings ($xml, $xpath, $location)
+	{
+		$before = libxml_use_internal_errors(true);
+		libxml_clear_errors();
+
+		$res = $this->stripValidationExcessXml($xml, $xpath, true);
+		$xpath = $res['xp'];
+		$xml = $res['xml'];
+
+		$return = array();
+
+		$elements = $this->getElementNames();
+		foreach ($elements as $element) {
+			$testXml = Xml::load($xml);
+
+			if ($location === 'before') {
+				$testXml->insertBefore('<' . $element . '/>', $xpath);
+			} else {
+				$testXml->insertAfter('<' . $element . '/>', $xpath);
+			}
+
+			$testXml = $testXml->getFormatted();
+
+			$dom = new \DomDocument();
+			$dom->loadXml($testXml);
+
+			$valid = $dom->schemaValidateSource($this->schema->xmlGet(Xml::STRING));
+			$valid = true;
+
+			$errors = libxml_get_errors();
+			if (!empty($errors)) {
+				foreach ($errors as $error) {
+					if (($error->code === 1871) && (strpos($error->message, 'This element is not expected.') !== false)) {
+						$valid = false;
+						break;
+					}
+				}
+			}
+			libxml_clear_errors();
+
+			if ($valid === true) {
+				$return[] = $element;
+			}
+		}
+		libxml_clear_errors();
+		libxml_use_internal_errors($before);
+
+		return $return;
+	}
+
+	private function stripValidationExcessXml ($xml, $xpath, $includeParent = false)
+	{
+		$before = libxml_use_internal_errors(true);
+		libxml_clear_errors();
+
+		$xml = Xml::load($xml);
+		$dom = new \DomDocument();
+
+		$rpath = array_reverse(explode('/', trim($xpath, '/')));
+		$p = '';
+		$count = count($rpath);
+		for ($i = 0; $i < $count; $i++) {
+			$p = '/' . $rpath[$i] . $p;
+			$xp = array_slice($rpath, $i);
+			if (($includeParent === true) || ($i !== 0)) {
+				array_shift($xp);
+			}
+			$xp = '/' . implode('/', array_reverse($xp));
+
+			$tXml = $xml->xpath($xp);
+			$dom->loadXml($tXml);
+			$dom->schemaValidateSource($this->schema->xmlGet(Xml::STRING));
+			$noMatch = false;
+
+			$errors = libxml_get_errors();
+			if (!empty($errors)) {
+				foreach ($errors as $error) {
+					if ($error->code === 1845) {
+						$noMatch = true;
+						break;
+					}
+				}
+			}
+			libxml_clear_errors();
+
+			if ($noMatch === false) {
+				break;
+			}
+		}
+
+		$return = array();
+		if ($includeParent === true) {
+			$return['xp'] = '/*' . $p;
+		} else {
+			$return['xp'] = $p;
+		}
+		$return['xml'] = $tXml;
+
+		libxml_clear_errors();
+		libxml_use_internal_errors($before);
+
+		return $return;
+	}
+
+	public function validateXml ($xml)
+	{
+		$return = true;
+
+		$before = libxml_use_internal_errors(true);
+		libxml_clear_errors();
+
+		$dom = new \DomDocument();
+
+		$dom->loadXml($xml);
+		$dom->schemaValidateSource($this->schema->xmlGet(Xml::STRING));
+
+		$errors = libxml_get_errors();
+		if (!empty($errors)) {
+			$return = $errors;
+		}
+
+		libxml_clear_errors();
+		libxml_use_internal_errors($before);
+
+		return $return;
+	}
 }
