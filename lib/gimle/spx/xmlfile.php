@@ -203,6 +203,28 @@ class XmlFile
 		$this->xmlUpdate($dom->saveXML());
 	}
 
+	public function getNextId ($name, $prefix = 'gimle')
+	{
+		$ids = $this->xpath('//*/@' . $name, 'value');
+		$newId = 1;
+		$list = array();
+		if (!empty($ids)) {
+			foreach ($ids as $value) {
+				if (substr($value, 0, strlen($prefix)) === $prefix) {
+					if (preg_match('/^' . $prefix . '\d+$/', $value)) {
+						$list[] = (int)substr($value, strlen($prefix));
+					}
+				}
+			}
+		}
+		if (!empty($list)) {
+			foreach ($list as $value) {
+				$newId = max($list) + 1;
+			}
+		}
+		return $newId;
+	}
+
 	public function xpath ($path, $mode = 'xml')
 	{
 		if ($mode === 'xml') {
