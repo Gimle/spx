@@ -15,9 +15,9 @@ class XmlTranslator
 	/**
 	 * Translate the loaded xml elements and attributes to to system english.
 	 */
-	public function translate ($language)
+	public function translate ($language, $reverse = false)
 	{
-		$translations = $this->getElementTranslations($language);
+		$translations = $this->getElementTranslations($language, $reverse);
 		if (empty($translations['found'])) {
 			return false;
 		}
@@ -25,7 +25,7 @@ class XmlTranslator
 		$template = $this->genTemplate('elements', $translations);
 		$xml = $this->mergeXsl($template, $this->xml->xmlGet(Xml::STRING));
 
-		$translations = $this->getAttributeTranslations($language);
+		$translations = $this->getAttributeTranslations($language, true);
 
 		$template = $this->genTemplate('attributes', $translations);
 		$xml = $this->mergeXsl($template, $xml);
@@ -48,7 +48,7 @@ class XmlTranslator
 		return $return;
 	}
 
-	public function getAttributeTranslations ($language)
+	public function getAttributeTranslations ($language, $reverse = false)
 	{
 		$return = array();
 		$return['*'] = array();
@@ -74,10 +74,38 @@ class XmlTranslator
 			}
 		}
 
+		if ($reverse === true) {
+			$translations = $this->getElementTranslations($language, true);
+			$tmp = array();
+			foreach ($return as $key => $value) {
+				$subTemp = array();
+				foreach ($value as $attr => $attrData) {
+					if (isset($attrData['name'])) {
+						$subTemp[$attrData['name']]['name'] = $attr;
+					}
+					if (isset($attrData['values'])) {
+						$subSub = array();
+						foreach ($attrData['values'] as $keyValue => $valueValue) {
+							$subSub[$valueValue] = $keyValue;
+						}
+						$subTemp[$attrData['name']]['values'] = $subSub;
+					}
+				}
+
+				if (isset($translations['found'][$key])) {
+					$tmp[$translations['found'][$key]] = $subTemp;
+				} else {
+					$tmp[$key] = $subTemp;
+				}
+			}
+			$return = $tmp;
+			unset($tmp);
+		}
+
 		return $return;
 	}
 
-	public function getElementTranslations ($language)
+	public function getElementTranslations ($language, $reverse = false)
 	{
 		if ($this->xml === false) {
 			return false;
@@ -98,22 +126,30 @@ class XmlTranslator
 			if (!isset($translations[$elem])) {
 				$test = (array)$this->translation->xmlGet(Xml::SIMPLE)->xpath('//element[@name=\'' . $elem . '\']');
 				if ((!empty($test)) && (isset($test[0]->children()->$language))) {
-					// if ($reverse === true) {
-					// 	foreach ($translations as $ret => $val) {
-					// 		if ($val === $elem) {
-					// 			$return['found'][$ret] = $elem;
-					// 			break;
-					// 		}
-					// 	}
-					// } else {
+					if ($reverse === true) {
+						foreach ($translations as $ret => $val) {
+							if ($val === $elem) {
+								$return['found'][$ret] = $elem;
+								break;
+							}
+						}
+					} else {
 						$return['found'][$elem] = $elem;
-					// }
+					}
 				} else {
 					$return['missing'][$elem] = $elem;
 				}
 			} else {
 				$return['found'][$elem] = $translations[$elem];
 			}
+		}
+		if ($reverse === true) {
+			$tmp = array();
+			foreach ($return['found'] as $key => $value) {
+				$tmp[$value] = $key;
+			}
+			$return['found'] = $tmp;
+			unset($tmp);
 		}
 
 		return $return;
