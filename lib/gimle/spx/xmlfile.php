@@ -42,6 +42,30 @@ class XmlFile
 		return $this->insert($insert, $xpath, 'after');
 	}
 
+	public function getAttributes ($path)
+	{
+		$path .= '/@*';
+		$return = array();
+		$last = libxml_use_internal_errors(true);
+		$xpath = new \DOMXPath($this->xml->get(Xml::DOM));
+		if (!empty($this->registeredNamespaces)) {
+			foreach ($this->registeredNamespaces as $namespace) {
+				$xpath->registerNamespace($namespace['prefix'], $namespace['namespaceURI']);
+			}
+		}
+		$res = $xpath->query($path);
+		libxml_use_internal_errors($last);
+		if ($res === false) {
+			throw new \Exception('Invalid expression: "' . $path . '".', Xml::E_XPATH);
+		}
+		if ($res->length !== 0) {
+			foreach ($res as $entry) {
+				$return[$entry->nodeName] = $entry->nodeValue;
+			}
+		}
+		return $return;
+	}
+
 	public function setAttributes ($xpath, $name, $value)
 	{
 		$dom = $this->xmlGet(Xml::DOM);
