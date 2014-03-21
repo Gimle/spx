@@ -263,6 +263,10 @@ class XmlFile
 				$xpath->registerNamespace($namespace['prefix'], $namespace['namespaceURI']);
 			}
 		}
+		if ((substr($path, 0, 5) === 'name(') && (substr($path, -1, 1) === ')')) {
+			$mode = 'name';
+			$path = substr($path, 5, -1);
+		}
 		$res = $xpath->query($path);
 		libxml_use_internal_errors($last);
 		if ($res === false) {
@@ -274,6 +278,8 @@ class XmlFile
 					$return .= $this->xml->get(Xml::DOM)->saveXML($entry) . "\n";
 				} elseif ($mode === 'value') {
 					$return[] = $entry->nodeValue;
+				} elseif ($mode === 'name') {
+					$return[] = $entry->nodeName;
 				} else {
 					$return[] = $this->xml->get(Xml::DOM)->saveXML($entry);
 				}
