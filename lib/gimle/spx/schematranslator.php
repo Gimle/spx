@@ -7,6 +7,8 @@ class SchemaTranslator extends Schema
 
 	private $cahce = array();
 
+	private $getElementTranslations = array();
+
 	public function __construct ($schema, $translation = false)
 	{
 		if ($translation !== false) {
@@ -27,6 +29,12 @@ class SchemaTranslator extends Schema
 	{
 		if ($this->translation === false) {
 			return false;
+		}
+
+		$reverseStr = ($reverse === true ? 'true' : 'false');
+
+		if (isset($this->getElementTranslations[$language][$reverseStr])) {
+			return $this->getElementTranslations[$language][$reverseStr];
 		}
 
 		$return = array();
@@ -72,6 +80,8 @@ class SchemaTranslator extends Schema
 				$return[$key] = array_flip($value);
 			}
 		}
+
+		$this->getElementTranslations[$language][$reverseStr] = $return;
 
 		return $return;
 	}
@@ -158,7 +168,7 @@ class SchemaTranslator extends Schema
 			}
 			foreach ($value as $attr => $keys) {
 				if (isset($translations['*'][$attr]['values'])) {
-					if  (isset($keys['values'])) {
+					if (isset($keys['values'])) {
 						$translations[$element][$attr]['values'] = array_merge($translations['*'][$attr]['values'], $translations[$element][$attr]['values']);
 					} else {
 						$translations[$element][$attr]['values'] = $translations['*'][$attr]['values'];
