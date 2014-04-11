@@ -148,6 +148,11 @@ class XmlFile
 	{
 		$dom = $this->xmlGet(Xml::DOM);
 		$domXpath = new \DOMXPath($dom);
+		if (!empty($this->registeredNamespaces)) {
+			foreach ($this->registeredNamespaces as $namespace) {
+				$domXpath->registerNamespace($namespace['prefix'], $namespace['namespaceURI']);
+			}
+		}
 		$elems = $domXpath->query($xpath);
 		foreach ($elems as $elem) {
 			if (($removeTrailingWhitespaceTextNode === true) && ($elem->nextSibling !== null)) {

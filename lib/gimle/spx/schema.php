@@ -6,8 +6,13 @@ class Schema {
 
 	protected $cache = array();
 
+	protected $cwd = false;
+
 	public function __construct ($schema)
 	{
+		if ((!is_object($schema)) && ((substr($schema, 0, 1) !== '<')) && (file_exists($schema))) {
+			$this->cwd = substr($schema, 0, strrpos($schema, '/') + 1);
+		}
 		$this->schema = Xml::load($schema);
 		$this->schema->xmlGet(Xml::SIMPLE)->registerXPathNamespace('xs', 'http://www.w3.org/2001/XMLSchema');
 	}
@@ -308,6 +313,10 @@ class Schema {
 
 	public function getValidSibilings ($xml, $xpath, $location)
 	{
+		if ($this->cwd !== false) {
+			$oldDir = getcwd();
+			chdir($this->cwd);
+		}
 		$before = libxml_use_internal_errors(true);
 		libxml_clear_errors();
 
@@ -332,7 +341,7 @@ class Schema {
 			$dom = new \DomDocument();
 			$dom->loadXml($testXml);
 
-			$valid = $dom->schemaValidateSource($this->schema->xmlGet(Xml::STRING));
+			$dom->schemaValidateSource($this->schema->xmlGet(Xml::STRING));
 			$valid = true;
 
 			$errors = libxml_get_errors();
@@ -349,14 +358,60 @@ class Schema {
 			if ($valid === true) {
 				$return[] = $element;
 			}
+			unset($testXml);
 		}
 		libxml_clear_errors();
 		libxml_use_internal_errors($before);
 
+		if ($this->cwd !== false) {
+			chdir($oldDir);
+		}
+
 		return $return;
 	}
 
-	private function stripValidationExcessXml ($xml, $xpath, $includeParent = false)
+	public function canInsert ($xml, $new, $xpath, $location)
+	{
+		$before = libxml_use_internal_errors(true);
+		libxml_clear_errors();
+
+		$res = $this->stripValidationExcessXml($xml, $xpath, true);
+		$xpath = $res['xp'];
+		$xml = $res['xml'];
+
+		$testXml = Xml::load($xml);
+
+		if ($location === 'before') {
+			$testXml->insertBefore($new, $xpath);
+		} else {
+			$testXml->insertAfter($new, $xpath);
+		}
+
+		$testXml = $testXml->getFormatted();
+
+		$dom = new \DomDocument();
+		$dom->loadXml($testXml);
+
+		$valid = $dom->schemaValidateSource($this->schema->xmlGet(Xml::STRING));
+		$valid = true;
+
+		$errors = libxml_get_errors();
+		if (!empty($errors)) {
+			foreach ($errors as $error) {
+				if (($error->code === 1871) && (strpos($error->message, 'This element is not expected.') !== false)) {
+					$valid = false;
+					break;
+				}
+			}
+		}
+		libxml_clear_errors();
+
+		libxml_use_internal_errors($before);
+
+		return $valid;
+	}
+
+	protected function stripValidationExcessXml ($xml, $xpath, $includeParent = false)
 	{
 		$before = libxml_use_internal_errors(true);
 		libxml_clear_errors();
