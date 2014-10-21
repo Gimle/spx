@@ -91,6 +91,31 @@ class XmlFile
 		return true;
 	}
 
+	public function removeAttributes ($xpath, $name)
+	{
+		$dom = $this->xmlGet(Xml::DOM);
+
+		$domXpath = new \DomXPath($dom);
+		$last = libxml_use_internal_errors(true);
+		$res = $domXpath->query($xpath);
+		if ($res === false) {
+			throw new \Exception('Invalid expression: "' . $xpath . '".', Xml::E_XPATH);
+		}
+		libxml_clear_errors();
+		libxml_use_internal_errors($last);
+
+		foreach ($res as $item) {
+			$item->removeAttribute($name);
+		}
+
+		$xml = $dom->saveXML();
+		$this->xmlUpdate($xml);
+
+		unset($dom, $xp, $res, $xml);
+
+		return true;
+	}
+
 	private function insert ($insert, $xpath, $pos)
 	{
 		$replaceString = 'gimle-hopefully-safe-xml-replace-string';
