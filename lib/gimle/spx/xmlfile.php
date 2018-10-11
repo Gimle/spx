@@ -306,12 +306,17 @@ class XmlFile
 			foreach ($res as $entry) {
 				if ($mode === 'xml') {
 					$return .= $this->xml->get(Xml::DOM)->saveXML($entry) . "\n";
-				} elseif ($mode === 'value') {
-					$return[] = $entry->nodeValue;
-				} elseif ($mode === 'name') {
-					$return[] = $entry->nodeName;
 				} else {
-					$return[] = $this->xml->get(Xml::DOM)->saveXML($entry);
+					if (is_string($return)) {
+						$return = array();
+					}
+					if ($mode === 'value') {
+						$return[] = $entry->nodeValue;
+					} elseif ($mode === 'name') {
+						$return[] = $entry->nodeName;
+					} else {
+						$return[] = $this->xml->get(Xml::DOM)->saveXML($entry);
+					}
 				}
 			}
 		}
